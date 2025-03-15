@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+    <title>Controle de Vendas</title>
+</head>
+<body>
+    <h2>Registro de Vendas - <a href="clientes.html" class="btn-anotar">Anotar</a></h2>
+    <div class="container" id="vendas-container"></div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Quantidade</th>
+                <th>Valor Total (R$)</th>
+            </tr>
+        </thead>
+        <tbody id="tabela-vendas"></tbody>
+        <tfoot>
+            <tr>
+                <th colspan="2">Total Geral</th>
+                <th id="totalGeral">R$ 0</th>
+            </tr>
+        </tfoot>
+    </table>
+    
+    <!---<button id="btn-reset" onclick="resetarDados()">Resetar Dados</button> -->
+    <!-- Script externo -->
+    <script>
+        const itens = [
+    { nome: 'Combo com Suco', id: 'combo1', preco: 13 },
+    { nome: 'Combo com Refri', id: 'combo2', preco: 12 },
+    { nome: 'Pastel', id: 'pastel', preco: 10 },
+    { nome: 'Refrigerante', id: 'refrigerante', preco: 3 },
+    { nome: 'Suco', id: 'suco', preco: 4 },
+    { nome: 'Açaí', id: 'acai', preco: 15 }
+];
+
+function carregarDados() {
+    let totalGeral = 0;
+    let container = document.getElementById("vendas-container");
+    let tabelaBody = document.getElementById("tabela-vendas");
+    let containerHTML = "";
+    let tabelaHTML = "";
+
+    itens.forEach(item => {
+        let valor = parseInt(localStorage.getItem(item.id)) || 0;
+        totalGeral += valor * item.preco;
+
+        containerHTML += `
+            <div class="item">
+                <span>${item.nome}</span>
+                <span id="${item.id}">${valor}</span>
+                <div class="buttons">
+                    <button onclick="incrementar('${item.id}')">+</button>
+                    <button onclick="tirar('${item.id}')">-</button>
+                </div>
+            </div>
+        `;
+
+        tabelaHTML += `
+            <tr>
+                <td>${item.nome}</td>
+                <td>${valor}</td>
+                <td>R$ ${(valor * item.preco).toFixed(2)}</td>
+            </tr>
+        `;
+    });
+
+    container.innerHTML = containerHTML;
+    tabelaBody.innerHTML = tabelaHTML;
+    document.getElementById("totalGeral").innerText = `R$ ${totalGeral.toFixed(2)}`;
+}
+
+function incrementar(item) {
+    let valor = parseInt(localStorage.getItem(item)) || 0;
+    valor++;
+    localStorage.setItem(item, valor);
+    carregarDados();
+}
+
+function tirar(item) {
+    let valor = parseInt(localStorage.getItem(item)) || 0;
+    if (valor > 0) {
+        valor--;
+        localStorage.setItem(item, valor);
+        carregarDados();
+    }
+}
+
+function carregarCompradores() {
+    // Verifica se os compradores já foram carregados
+    if (localStorage.getItem('compradoresCarregados')) {
+        return; // Sai da função se já foram carregados
+    }
+
+    // Limpa os valores dos itens antes de carregar os compradores
+    itens.forEach(item => {
+        localStorage.setItem(item.id, 0);
+    });
+
+    // Carrega os itens dos compradores
+    Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('comprador_')) {
+            const itensComprados = JSON.parse(localStorage.getItem(key));
+            Object.entries(itensComprados).forEach(([itemId, quantidade]) => {
+                const atual = parseInt(localStorage.getItem(itemId)) || 0;
+                localStorage.setItem(itemId, atual + quantidade);
+            });
+        }
+    });
+
+    // Marca que os compradores foram carregados
+    localStorage.setItem('compradoresCarregados', true);
+}
+
+
+window.onload = function () {
+    carregarDados();
+    carregarCompradores();
+};
+    </script>
+</body>
+</html>

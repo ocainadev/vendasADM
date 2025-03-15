@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+    <title>Cadastro de Compras</title>
+</head>
+<body>
+    <h2>Cadastro de Compras - <a href="index.html" class="btn-anotar">Voltar</a></h2>
+    <div class="container">
+        <label for="comprador-select">Selecione o Comprador:</label>
+        <select id="comprador-select" onchange="alternarComprador()">
+            <option value="">-- Selecione --</option>
+        </select>
+        <button onclick="registrarNovoComprador()">+</button>
+        <div id="compras-container"></div>
+        <button onclick="fecharConta()">Fechar Conta</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Total de Compras</th>
+            </tr>
+        </thead>
+        <tbody id="tabela-compras"></tbody>
+        <tfoot>
+            <tr>
+                <th>Total Geral</th>
+                <th id="totalGeral">R$ 0</th>
+            </tr>
+        </tfoot>
+    </table>
+
+    
+    <script>
+    const itens = [
+    { nome: 'Combo com Suco', id: 'combo1', preco: 13 },
+    { nome: 'Combo com Refri', id: 'combo2', preco: 12 },
+    { nome: 'Pastel', id: 'pastel', preco: 10 },
+    { nome: 'Refrigerante', id: 'refrigerante', preco: 3 },
+    { nome: 'Suco', id: 'suco', preco: 4 },
+    { nome: 'Açaí', id: 'acai', preco: 15 }
+    ];
+
+let compras = [];
+let compradorAtual = null;
+let totalGeral = 0;
+
+function salvarCompradorNoLocalStorage(comprador) {
+    localStorage.setItem(`comprador_${comprador.nome}`, JSON.stringify(comprador.itens));
+}
+
+function carregarCompras() {
+    let container = document.getElementById("compras-container");
+    container.innerHTML = "";
+
+    if (compradorAtual) {
+        itens.forEach(item => {
+            let comprador = compras.find(c => c.nome === compradorAtual);
+            let quantidade = comprador ? comprador.itens[item.id] || 0 : 0;
+
+            container.innerHTML += `
+                <div class="item">
+                    <span>${item.nome} - ${quantidade}</span>
+                    <div class="buttons">
+                        <button onclick="adicionarItem('${item.id}')">+</button>
+                        <button onclick="removerItem('${item.id}')">-</button>
+                    </div>
+                </div>
+            `;
+        });
+    }
+}
+
+function carregarCompradores() {
+    // Limpa a lista de compras antes de carregar
+    compras = [];
+    totalGeral = 0; // Reseta o total geral
+
+    // Carrega os compradores do localStorage
+    Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('comprador_')) {
+            const nomeComprador = key.replace('comprador_', '');
+            const itensComprados = JSON.parse(localStorage.getItem(key));
+
+            // Adiciona o comprador à lista de compras
+            compras.push({ nome: nomeComprador, itens: itensComprados });
+
+            // Recalcula o total geral
+            Object.entries(itensComprados).forEach(([itemId, quantidade]) => {
+                const item = itens.find(i => i.id === itemId);
+                if (item) {
+                    totalGeral += quantidade * item.preco;
+                }
+            });
+        }
+    });
+
+    // Atualiza o total geral na interface
+    document.getElementById("totalGeral").innerText = `R$ ${totalGeral.toFixed(2)}`;
+}
+
+function adicionarItem(itemId) {
+    if (!compradorAtual) {
+        alert("Selecione um comprador.");
+        return;
+    }
+
+    let comprador = compras.find(c => c.nome === compradorAtual);
+    if (!comprador) {
+        alert("Erro: comprador não encontrado.");
+        return;
+    }
+
+    if (!comprador.itens[itemId]) {
+        comprador.itens[itemId] = 0;
+    }
+
+    comprador.itens[itemId]++;
+    salvarCompradorNoLocalStorage(comprador); // Salva no localStorage
+    atualizarTabela();
+    carregarCompras();
+}
+
+function removerItem(itemId) {
+    if (!compradorAtual) {
+        alert("Selecione um comprador.");
+        return;
+    }
+
+    let comprador = compras.find(c => c.nome === compradorAtual);
+    if (!comprador || !comprador.itens[itemId] || comprador.itens[itemId] <= 0) {
+        return;
+    }
+
+    comprador.itens[itemId]--;
+    salvarCompradorNoLocalStorage(comprador); // Salva no localStorage
+    atualizarTabela();
+    carregarCompras();
+}
+
+function registrarNovoComprador() {
+    let nome = prompt("Digite o nome do comprador:");
+    if (!nome) {
+        alert("Nome não pode ser vazio.");
+        return;
+    }
+
+    if (compras.some(c => c.nome === nome)) {
+        alert("Esse comprador já foi registrado.");
+        return;
+    }
+
+    let novoComprador = { nome: nome, itens: {} };
+    compras.push(novoComprador);
+    salvarCompradorNoLocalStorage(novoComprador); // Salva no localStorage
+    atualizarSelectCompradores();
+    alert(`Comprador ${nome} registrado com sucesso.`);
+}
+
+function alternarComprador() {
+    let select = document.getElementById("comprador-select");
+    compradorAtual = select.value;
+
+    if (compradorAtual) {
+        carregarCompras(); // Carrega as compras do comprador selecionado
+    } else {
+        // Limpa o container se nenhum comprador for selecionado
+        document.getElementById("compras-container").innerHTML = "";
+    }
+}
+
+function atualizarSelectCompradores() {
+    let select = document.getElementById("comprador-select");
+    select.innerHTML = "<option value=''>-- Selecione --</option>"; // Limpa as opções
+
+    compras.forEach(comprador => {
+        let option = document.createElement("option");
+        option.value = comprador.nome;
+        option.text = comprador.nome;
+        select.appendChild(option);
+    });
+}
+
+function atualizarTabela() {
+    let tabelaBody = document.getElementById("tabela-compras");
+    tabelaBody.innerHTML = "";
+
+    totalGeral = 0; // Reseta o total geral
+
+    compras.forEach(comprador => {
+        let totalCompras = 0;
+        let row = "<tr><td>" + comprador.nome + "</td><td>";
+
+        itens.forEach(item => {
+            let quantidade = comprador.itens[item.id] || 0;
+            totalCompras += quantidade * item.preco;
+        });
+
+        totalGeral += totalCompras;
+        row += `R$ ${totalCompras.toFixed(2)}</td></tr>`;
+        tabelaBody.innerHTML += row;
+    });
+
+    // Atualiza o total geral na interface
+    document.getElementById("totalGeral").innerText = `R$ ${totalGeral.toFixed(2)}`;
+}
+
+function fecharConta() {
+    if (!compradorAtual) {
+        alert("Selecione um comprador.");
+        return;
+    }
+
+    const comprador = compras.find(c => c.nome === compradorAtual);
+    if (!comprador || Object.keys(comprador.itens).length === 0) {
+        alert("Nenhum item registrado para este comprador.");
+        return;
+    }
+
+    // Atualiza o localStorage com os itens do comprador
+    Object.entries(comprador.itens).forEach(([itemId, quantidade]) => {
+        const atual = parseInt(localStorage.getItem(itemId)) || 0;
+        localStorage.setItem(itemId, atual + quantidade);
+    });
+
+    // Remove o comprador do localStorage
+    localStorage.removeItem(`comprador_${comprador.nome}`);
+
+    alert(`Conta fechada! Total: R$ ${calcularTotalComprador(comprador).toFixed(2)}`);
+    
+    // Limpa os itens do comprador e atualiza a interface
+    comprador.itens = {};
+    atualizarTabela();
+    carregarCompras();
+    window.location.href = "index.html"; // Redireciona para a página principal
+}
+
+function calcularTotalComprador(comprador) {
+    let total = 0;
+    itens.forEach(item => {
+        let quantidade = comprador.itens[item.id] || 0;
+        total += quantidade * item.preco;
+    });
+    return total;
+}
+
+function resetarDados() {
+
+    if (confirm("Tem certeza que deseja resetar todos os dados? Isso não pode ser desfeito.")) {
+        // Limpa todos os itens do localStorage
+        itens.forEach(item => {
+            localStorage.removeItem(item.id);
+        });
+
+        // Remove todos os registros de compradores
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('comprador_')) {
+                localStorage.removeItem(key);
+            }
+        });
+
+        // Remove a marcação de compradores carregados
+        localStorage.removeItem('compradoresCarregados');
+
+        // Recarrega a página para exibir os valores zerados
+        window.location.reload();
+    }
+}
+
+window.onload = function () {
+    carregarCompradores(); // Carrega os compradores do localStorage
+    atualizarSelectCompradores(); // Atualiza o select com os compradores
+    atualizarTabela(); // Atualiza a tabela de compras
+};
+    </script>
+</body>
+</html>
