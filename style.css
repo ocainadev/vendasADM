@@ -76,7 +76,7 @@ button {
     border: 1px solid #007bff;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 762px) {
     .container {
         max-width: 90%;
         padding: 15px;
